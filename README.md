@@ -1,5 +1,9 @@
 ## 🐶 A watchdog for the rport service on Windows
 
+> ✋ **Use only if really needed!** The rport client is robust and always re-establishes the 
+> connection to the rport server. The watchdog should only be used in rare cases when have experienced
+> lost connections. Do not use as a generic preventive measure.
+
 A watchdog that supervises the rport service and restarts it when needed.
 The watchdog script is intended to be run every five minutes as a scheduled task.
 
@@ -16,7 +20,7 @@ Install from a PowerShell with administrative rights.
 
 ```powershell
 cd "C:\Program Files\rport"
-iwr https://github.com/cloudradar-monitoring/rport-win-watchdog/releases/latest/watchdog.ps1 `
+iwr https://github.com/cloudradar-monitoring/rport-win-watchdog/releases/latest/download/watchdog.ps1 `
 -OutFile watchgog.ps1
 ```
 
@@ -29,7 +33,7 @@ PS> .\watchdog.ps1 -Threshold 90
 
 Before registering the scheduled task, read about [what's your best threshold](https://oss.rport.io/advanced/watchdog-integration/#implement-your-watchdog).
 
-Register the script as scheduled task:
+Register the script as a scheduled task:
 
 ```powershell
 PS>  .\watchdog.ps1 -Threshold 300 -Register
