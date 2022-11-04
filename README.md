@@ -21,7 +21,7 @@ Install from a PowerShell with administrative rights.
 ```powershell
 cd "C:\Program Files\rport"
 iwr https://github.com/cloudradar-monitoring/rport-win-watchdog/releases/latest/download/watchdog.ps1 `
--OutFile watchgog.ps1
+-OutFile watchdog.ps1
 ```
 
 Test, if the state file can be read:
