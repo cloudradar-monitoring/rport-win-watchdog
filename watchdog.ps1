@@ -55,7 +55,7 @@ function Test-RportState {
         Write-Message "ERROR: Statefile $($stateFile) not found. Not cheching."
         return
     }
-    $now = ((Get-Date -UFormat %s) - [int](Get-Date -UFormat %Z) * 3600)
+    $now = [DateTimeOffset]::Now.ToUnixTimeSeconds()
     $lastUpdate = (Get-Content $stateFile | ConvertFrom-Json).last_update_ts
     $diff = $now - $lastUpdate
     if ($diff -gt $Threshold) {
