@@ -16,7 +16,19 @@ with the current time and restart the rport service if the given threshold is ex
 
 ### Installation & Usage
 
-Install from a PowerShell with administrative rights.
+From a PowerShell **with administrative rights**
+
+If you haven't activated the watchdog integration, do so:
+
+```powershell
+Set-Location "C:\Program Files\rport"
+(Get-Content -path rport.conf -Raw) -replace '#watchdog_integration = false','watchdog_integration = true'|`
+ Set-Content -Path rport.conf
+restart-service rport
+Get-Content  .\data\state.json
+```
+
+Download the watchdog script, test and install.
 
 ```powershell
 cd "C:\Program Files\rport"
