@@ -194,6 +194,8 @@ if ($Register) {
 
 # Wipe the logfile before each run
 Clear-Content $logFile -ErrorAction SilentlyContinue
+
+# Execute the check, if state file exists.
 if (-not (Test-Path $stateFile -PathType Leaf)) {
     Write-Message "ERROR: Statefile $($stateFile) not found. Not checking."
 }
