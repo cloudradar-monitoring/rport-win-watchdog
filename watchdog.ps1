@@ -51,10 +51,6 @@ function Test-RportState {
     .OUTPUTS
     System.ValueType Boolean
     #>
-    if (-not (Test-Path $stateFile -PathType Leaf)) {
-        Write-Message "ERROR: Statefile $($stateFile) not found. Not cheching."
-        return
-    }
     $now = [DateTimeOffset]::Now.ToUnixTimeSeconds()
     $lastUpdate = (Get-Content $stateFile | ConvertFrom-Json).last_update_ts
     $diff = $now - $lastUpdate
@@ -127,10 +123,10 @@ function Get-TaskState {
     if ($state) {
         Write-Output "Task $($taskName) is registered with state: $($state.state)"
         $taskInfo = (Get-ScheduledTaskInfo -TaskName $taskName)
-        if($taskInfo.LastTaskResult -eq 267011) {
+        if ($taskInfo.LastTaskResult -eq 267011) {
             Write-Output "Task has not yet run."
         }
-        elif($taskInfo.LastTaskResult -ne 0){
+        elif($taskInfo.LastTaskResult -ne 0) {
             Write-Output "**CAUTION! The last execution of the task has failed.**"
         }
         $taskInfo
@@ -198,7 +194,10 @@ if ($Register) {
 
 # Wipe the logfile before each run
 Clear-Content $logFile -ErrorAction SilentlyContinue
-if (-not (Test-RportState)) {
+if (-not (Test-Path $stateFile -PathType Leaf)) {
+    Write-Message "ERROR: Statefile $($stateFile) not found. Not checking."
+}
+elseif (-not (Test-RportState)) {
     Restart-Rport
 }
 if (-not (($env:USERPROFILE).Endswith("systemprofile"))) {
