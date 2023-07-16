@@ -21,7 +21,6 @@ PS> watchdog.ps1 -Threshold 90
 https://github.com/cloudradar-monitoring/rport-win-watchdog
 https://oss.rport.io/advanced/watchdog-integration/
 #>
-#Requires -RunAsAdministrator
 Param(
     [switch]$Register,
     [switch]$Unregister,
@@ -51,11 +50,13 @@ function Test-RportState {
     .OUTPUTS
     System.ValueType Boolean
     #>
-    $now = [DateTimeOffset]::Now.ToUnixTimeSeconds()
-    $lastUpdate = (Get-Content $stateFile | ConvertFrom-Json).last_update_ts
+    try { $now = [DateTimeOffset]::Now.ToUnixTimeSeconds() }
+    catch { $now = [Math]::Floor([decimal](Get-Date(Get-Date).ToUniversalTime()-uformat "%s")) }
+
+    $lastUpdate = (Get-Content $stateFile -Raw | ConvertFrom-Json).last_update_ts
     $diff = $now - $lastUpdate
     if ($diff -gt $Threshold) {
-        Write-Message "RPort hangs. No activity deteced for $($diff) seconds (> $($Threshold)). Will restart service rport ..."
+        Write-Message "RPort hangs. No activity deteced for $($diff) seconds (> $($Threshold)). Will restart rport service..."
         return $false
     }
     else {
@@ -101,7 +102,21 @@ function Register-Task {
         -Execute "powershell" `
         -Argument "-ExecutionPolicy bypass -file $( $taskFile ) -Threshold $Threshold" `
         -WorkingDirectory $dir
-    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes $IntervallMin)
+    $startTime = (get-date)
+    $Params2012 = @{
+     "Once" = $true
+     "At" = $startTime
+     "RepetitionInterval" = (New-TimeSpan -Minutes $IntervallMin)
+     "RepetitionDuration" = (New-TimeSpan -Start (Get-Date) -End ((Get-Date).AddDays(9999)))
+    }
+    $Params2016 = @{
+     "Once" = $true
+     "At" = $startTime
+     "RepetitionInterval" = (New-TimeSpan -Minutes $IntervallMin)
+    }
+    if([environment]::OSVersion.Version.Major -ge 10){$Params = $Params2016}
+    if([environment]::OSVersion.Version.Major -le 6){$Params = $Params2012}
+    $trigger = New-ScheduledTaskTrigger @Params
     $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries
     $task = New-ScheduledTask `
@@ -161,6 +176,12 @@ function Test-LastStartupError {
     $rportStartupErrors.Message | Select-String -Pattern "A time" -Quiet
 }
 
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not($currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))) {
+    Write-Error -Message "You are not an admin, please elevate and run the script again"
+    exit 1
+}
+
 if (-not(Get-Service rport -ErrorAction SilentlyContinue)) {
     Write-Error "Service not found! This script requires rport to be registerd as a windows service."
     exit 1
@@ -171,6 +192,7 @@ if ($Unregister) {
     Write-Output "Task unregistered"
     exit 0
 }
+
 if ($State) {
     Get-TaskState
     exit 0
@@ -180,6 +202,7 @@ if ($Threshold -eq 0) {
     Write-Error "Threshold missing. Use -Threshold N (seconds)"
     exit 1
 }
+
 if ($Register) {
     if ($PWD.Path -ne $dir) {
         Write-Output "Copy script to $($dir) first and execute again from there."
@@ -202,6 +225,7 @@ if (-not (Test-Path $stateFile -PathType Leaf)) {
 elseif (-not (Test-RportState)) {
     Restart-Rport
 }
+
 if (-not (($env:USERPROFILE).Endswith("systemprofile"))) {
     # Print the logfile to the console
     Get-Content $logFile
